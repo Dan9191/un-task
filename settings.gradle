@@ -1,0 +1,5 @@
+rootProject.name = 'un-task'
+
+include 'service-postgres'
+include 'service-redis'
+

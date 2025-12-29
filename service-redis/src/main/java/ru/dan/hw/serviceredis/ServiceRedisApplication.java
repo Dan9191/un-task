@@ -1,0 +1,14 @@
+package ru.dan.hw.serviceredis;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ServiceRedisApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ServiceRedisApplication.class, args);
+        System.out.println("asdasdas");
+    }
+
+}
