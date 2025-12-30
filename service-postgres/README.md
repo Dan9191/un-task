@@ -1,8 +1,18 @@
 # Subscription storage service
 
 ## Описание
-Сервис работы с подписками и обработкой чеков
+Сервис работы с подписками и обработкой чеков.
+Если во время работы сервиса брокер был не доступен, то статус чека "sentToBroker" останется false, при следующем запуске задачи будет произведена повторная попытка отправки чека в очередь сообщений.
 
+## Типы задач
+```
+ru.dan.hw.servicepostgres.service.BillingService.generateDailyReceipts
+Обработка новых подписок и создание для них чеков в таблице receipt
+```
+```
+ru.dan.hw.servicepostgres.service.CheckRetryService.retrySendingChecks
+Отправка данных о чеках в очеред сообщений. При удачной отправке, записи для receipt помечаются "sentToBroker" = true 
+```
 ## Swagger
 Доступен по
 http://localhost:8098/api/swagger-ui/index.html
@@ -32,3 +42,21 @@ http://localhost:8098/api/swagger-ui/index.html
 | BILLING_QUEUE              | billing.checks.queue                                   | Название очереди RABBITMQ                          |
 | DAILY_CRON                 | 0 50 17 * * *                                          | Время запуска ежедневной задачи по обработке чеков |
 | RETRY_DELAY                | 5000                                                   | Период запуска задачи отправки сообщений в брокер  |
+
+
+## Пример запросов
+### 1. Активация подписки (`POST /api/v1/subscriptions/activate`)
+```json
+{
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "subscriptionType": "PRO",
+  "activationDate": "2025-01-01"
+}
+```
+### 2. Деактивация подписки (`POST /api/v1/subscriptions/deactivate`)
+```json
+{
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "subscriptionType": "PRO"
+}
+```
