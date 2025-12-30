@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Integer> {
 
+    List<Subscription> findByUserIdAndSubscriptionTypeName(UUID userId, String typeName);
 
     List<Subscription> findByUserIdAndActiveTrue(UUID userId);
 
