@@ -20,7 +20,7 @@ public abstract class BaseTestWithContext {
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",
-                () -> String.format("jdbc:postgresql://%s:%d/test?currentSchema=mos", // исправлено на mos
+                () -> String.format("jdbc:postgresql://%s:%d/test?currentSchema=un",
                         TestContainersFactory.POSTGRES.getHost(), TestContainersFactory.POSTGRES.getFirstMappedPort()));
         registry.add("spring.datasource.username", TestContainersFactory.POSTGRES::getUsername);
         registry.add("spring.datasource.password", TestContainersFactory.POSTGRES::getPassword);

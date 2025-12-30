@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.dan.hw.servicepostgres.configuration.AppPropertiesConfig;
@@ -26,11 +25,10 @@ public class CheckRetryService {
     /**
      * Периодическая задача повторной отправки счетов в брокер сообщений.
      */
-    @Scheduled(fixedDelayString = "${billing.retry-delay:30000}")
+    @Scheduled(fixedDelayString = "#{@appPropertiesConfig.retryDelay}")
     public void retrySendingChecks() {
 
-        List<Receipt> unsentChecks =
-                receiptRepository.findUnsentForUpdate(PageRequest.of(0, appPropertiesConfig.getBatchSize()));
+        List<Receipt> unsentChecks = receiptRepository.findTop100BySentToBrokerFalseOrderById();
 
         if (unsentChecks.isEmpty()) {
             log.debug("Нет счетов для повторной отправки");

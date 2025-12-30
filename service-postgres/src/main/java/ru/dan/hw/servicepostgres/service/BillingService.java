@@ -29,7 +29,7 @@ public class BillingService {
     /**
      * Задача для выписывания счетов на активные и не обработанные подписки.
      */
-    @Scheduled(cron = "${billing.daily-cron:0 50 23 * * *}")
+    @Scheduled(cron = "#{@appPropertiesConfig.dailyCron}")
     @Transactional
     public void generateDailyReceipts() {
         LocalDate today = LocalDate.now();
