@@ -84,7 +84,7 @@ class ServicePostgresApplicationTests extends BaseTestWithContext {
                         .content(requestJson))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title", is("Конфликт")))
-                .andExpect(jsonPath("$.detail", containsString("У пользователя уже есть активная подписка")));
+                .andExpect(jsonPath("$.detail", containsString("User already has an active subscription")));
     }
 
     @Test
@@ -104,7 +104,7 @@ class ServicePostgresApplicationTests extends BaseTestWithContext {
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title", is("Некорректные данные")))
-                .andExpect(jsonPath("$.detail", containsString("Тип подписки не найден")));
+                .andExpect(jsonPath("$.detail", containsString("Subscription type not found: PREMIUM")));
     }
 
     @Test
@@ -153,7 +153,7 @@ class ServicePostgresApplicationTests extends BaseTestWithContext {
                         .content(requestJson))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title", is("Конфликт")))
-                .andExpect(jsonPath("$.detail", containsString("Активная подписка типа BASIC не найдена")));
+                .andExpect(jsonPath("$.detail", containsString("Active subscription of type BASIC not found for user")));
     }
 
 }

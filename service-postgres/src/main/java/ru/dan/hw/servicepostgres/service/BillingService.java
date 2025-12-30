@@ -25,7 +25,6 @@ public class BillingService {
     private final SubscriptionRepository subscriptionRepository;
     private final ReceiptRepository receiptRepository;
 
-
     /**
      * Задача для выписывания счетов на активные и не обработанные подписки.
      */
@@ -34,17 +33,17 @@ public class BillingService {
     public void generateDailyReceipts() {
         LocalDate today = LocalDate.now();
 
-        log.info("Запуск ежедневного биллинга на {}", today);
+        log.info("Starting daily billing run for {}", today);
 
         List<Subscription> subscriptionsToBill = subscriptionRepository
                 .findAllByActivationDateAndActiveTrueAndProcessedFalse(today);
 
         if (subscriptionsToBill.isEmpty()) {
-            log.info("Нет подписок для биллинга сегодня");
+            log.info("No subscriptions to bill today");
             return;
         }
 
-        log.info("Найдено {} подписок для выставления счёта", subscriptionsToBill.size());
+        log.info("Found {} subscriptions to generate receipts for", subscriptionsToBill.size());
 
         for (Subscription sub : subscriptionsToBill) {
             SubscriptionType type = sub.getSubscriptionType();
@@ -61,10 +60,10 @@ public class BillingService {
             sub.setProcessed(true);
             subscriptionRepository.save(sub);
 
-            log.info("Счёт создан и сохранён в очередь: user={}, type={}, activationDate={}",
+            log.info("Receipt created and queued: user={}, type={}, activationDate={}",
                     sub.getUserId(), type.getName(), sub.getActivationDate());
         }
 
-        log.info("Генерация счетов завершена");
+        log.info("Receipt generation completed");
     }
 }

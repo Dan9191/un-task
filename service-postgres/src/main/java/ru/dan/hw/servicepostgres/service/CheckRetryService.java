@@ -31,11 +31,11 @@ public class CheckRetryService {
         List<Receipt> unsentChecks = receiptRepository.findTop100BySentToBrokerFalseOrderById();
 
         if (unsentChecks.isEmpty()) {
-            log.debug("Нет счетов для повторной отправки");
+            log.debug("No receipts to retry sending");
             return;
         }
 
-        log.info("Найдено {} счетов для повторной отправки", unsentChecks.size());
+        log.info("Found {} receipts for retry sending", unsentChecks.size());
 
         for (Receipt receipt : unsentChecks) {
             try {
@@ -51,23 +51,23 @@ public class CheckRetryService {
 
                 int updated = receiptRepository.markAsSent(receipt.getId());
                 if (updated == 0) {
-                    log.warn("Счет {} уже был обработан параллельно", receipt.getId());
+                    log.warn("Receipt {} was already processed concurrently", receipt.getId());
                 } else {
-                    log.info("Счет {} успешно отправлен в RabbitMQ", receipt.getId());
+                    log.info("Receipt {} successfully sent to RabbitMQ", receipt.getId());
                 }
 
             } catch (AmqpException e) {
                 log.warn(
-                        "RabbitMQ недоступен, остановка обработки. Последний счет id={}",
+                        "RabbitMQ is unavailable, stopping processing. Last receipt id={}",
                         receipt.getId(),
                         e
                 );
                 break;
             } catch (Exception e) {
-                log.error("Ошибка обработки счета id={}", receipt.getId(), e);
+                log.error("Error processing receipt id={}", receipt.getId(), e);
             }
         }
 
-        log.info("Цикл повторной отправки завершён");
+        log.info("Retry sending cycle completed");
     }
 }

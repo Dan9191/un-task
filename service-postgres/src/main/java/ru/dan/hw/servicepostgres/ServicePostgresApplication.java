@@ -10,7 +10,6 @@ public class ServicePostgresApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ServicePostgresApplication.class, args);
-        System.out.println("hihiih");
     }
 
 }

@@ -52,28 +52,28 @@ public class SubscriptionService {
         String subscriptionTypeName = request.subscriptionType();
         LocalDate activationDate = request.activationDate();
 
-        log.info("Попытка активации подписки для пользователя {} типа {} с датой активации {}",
+        log.info("Attempting to activate subscription for user {} of type {} with activation date {}",
                 userId, subscriptionTypeName, activationDate);
 
         if (activationDate.isBefore(LocalDate.now())) {
-            log.warn("Дата активации {} в прошлом для пользователя {}", activationDate, userId);
-            throw new IllegalArgumentException("Дата активации не может быть в прошлом");
+            log.warn("Activation date {} is in the past for user {}", activationDate, userId);
+            throw new IllegalArgumentException("Activation date cannot be in the past");
         }
 
         SubscriptionType type = subscriptionTypeService.findByName(subscriptionTypeName)
                 .orElseThrow(() -> {
-                    log.error("Неизвестный тип подписки: {}", subscriptionTypeName);
-                    return new IllegalArgumentException("Тип подписки не найден: " + subscriptionTypeName);
+                    log.error("Unknown subscription type: {}", subscriptionTypeName);
+                    return new IllegalArgumentException("Subscription type not found: " + subscriptionTypeName);
                 });
 
         List<Subscription> activeSubs = subscriptionRepository.findByUserIdAndActiveTrue(userId);
         if (!activeSubs.isEmpty()) {
-            log.warn("У пользователя {} уже есть активная подписка", userId);
-            throw new IllegalStateException("У пользователя уже есть активная подписка");
+            log.warn("User {} already has an active subscription", userId);
+            throw new IllegalStateException("User already has an active subscription");
         }
 
         userRepository.findById(userId).orElseGet(() -> {
-            log.info("Создаём нового пользователя с ID {}", userId);
+            log.info("Creating new user with ID {}", userId);
             User newUser = User.builder().userId(userId).build();
             return userRepository.save(newUser);
         });
@@ -87,7 +87,7 @@ public class SubscriptionService {
 
         Subscription saved = subscriptionRepository.save(subscription);
 
-        log.info("Подписка успешно активирована: ID={}, пользователь={}, тип={}, дата={}",
+        log.info("Subscription successfully activated: ID={}, user={}, type={}, date={}",
                 saved.getId(), userId, subscriptionTypeName, activationDate);
 
         return new SubscriptionResponse(
@@ -108,26 +108,26 @@ public class SubscriptionService {
         UUID userId = request.userId();
         String subscriptionTypeName = request.subscriptionType();
 
-        log.info("Попытка деактивации подписки типа {} для пользователя {}", subscriptionTypeName, userId);
+        log.info("Attempting to deactivate subscription of type {} for user {}", subscriptionTypeName, userId);
 
         SubscriptionType type = subscriptionTypeService.findByName(subscriptionTypeName)
                 .orElseThrow(() -> {
-                    log.error("Неизвестный тип подписки при деактивации: {}", subscriptionTypeName);
-                    return new IllegalArgumentException("Тип подписки не найден: " + subscriptionTypeName);
+                    log.error("Unknown subscription type during deactivation: {}", subscriptionTypeName);
+                    return new IllegalArgumentException("Subscription type not found: " + subscriptionTypeName);
                 });
 
         Subscription subscription = subscriptionRepository
                 .findByUserIdAndSubscriptionTypeAndActiveTrue(userId, type)
                 .orElseThrow(() -> {
-                    log.warn("Активная подписка типа {} не найдена для пользователя {}", subscriptionTypeName, userId);
+                    log.warn("Active subscription of type {} not found for user {}", subscriptionTypeName, userId);
                     return new IllegalStateException(
-                            "Активная подписка типа " + subscriptionTypeName + " не найдена у пользователя");
+                            "Active subscription of type " + subscriptionTypeName + " not found for user");
                 });
 
         subscription.setActive(false);
         subscriptionRepository.save(subscription);
 
-        log.info("Подписка деактивирована: ID={}, пользователь={}, тип={}",
+        log.info("Subscription deactivated: ID={}, user={}, type={}",
                 subscription.getId(), userId, subscriptionTypeName);
     }
 }

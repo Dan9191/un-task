@@ -13,17 +13,17 @@ import org.springframework.context.annotation.Configuration;
 public class AppPropertiesConfig {
 
     /**
-     * Топик для отправки обработанных счетов.
+     * Топик для отправки обработанных чеков.
      */
     private String billingQueue = "billing.checks.queue";
 
     /**
-     * Cron-выражение для ежедневной задачи генерация счетов.
+     * Cron-выражение для ежедневной задачи генерация чеков.
      */
     private String dailyCron = "0 5 17 * * *";
 
     /**
-     * Задержка (в миллисекундах) между запусками задачи отправки счетов в брокер.
+     * Задержка (в миллисекундах) между запусками задачи отправки чеков в брокер.
      */
     private long retryDelay = 30_000L;
 
