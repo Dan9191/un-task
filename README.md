@@ -67,6 +67,10 @@
 * JUnit 5 + Mockito
 ```
 
+### Проблемы, не озвученные явно:
+* В топик отправляются только сообщения об обработанных подписках. Если подписку отменили, эта информация не учитывается.
+
+
 ## Service-postgres
 ### Сборка
 ```shell
@@ -76,4 +80,15 @@
 ### Запуск
 ```shell
 ./gradlew :service-postgres:bootRun
+```
+
+## Service-redis 
+### Сборка
+```shell
+./gradlew :service-redis:clean build
+```
+
+### Запуск
+```shell
+./gradlew :service-redis:bootRun
 ```

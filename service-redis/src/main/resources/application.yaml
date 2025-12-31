@@ -1,0 +1,51 @@
+server:
+  port: ${SERVER_PORT:8099}
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:service-redis}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:authentik}
+      client-type: lettuce
+      lettuce:
+        pool:
+          enabled: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    connection-timeout: ${RABBITMQ_CON_TIMEOUT:5000}
+
+    template:
+      retry:
+        enabled: true
+        multiplier: 2.0
+        initial-interval: 2000ms
+        max-retries: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,readiness,liveness
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: "service-redis"
+
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+
+app:
+  un-redis:
+    billing-queue: ${BILLING_QUEUE:billing.checks.queue}
