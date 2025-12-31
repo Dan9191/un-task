@@ -31,7 +31,7 @@ spring:
 app:
   un:
     billing-queue: ${BILLING_QUEUE:billing.checks.queue}
-    daily-cron: ${DAILY_CRON:0 26 3 * * *}
+    daily-cron: ${DAILY_CRON:0 34 3 * * *}
     retry-delay: ${RETRY_DELAY:5000}
 
 

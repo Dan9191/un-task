@@ -1,10 +1,8 @@
 package ru.dan.hw.serviceredis.service;
 
-import ru.dan.hw.serviceredis.model.ReceiptInfo;
 import ru.dan.hw.serviceredis.model.ReceiptMessage;
 import ru.dan.hw.serviceredis.model.UserInfoResponse;
 
-import java.util.List;
 import java.util.UUID;
 
 /**

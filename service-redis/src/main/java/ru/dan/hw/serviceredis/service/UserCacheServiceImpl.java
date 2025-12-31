@@ -13,26 +13,17 @@ import ru.dan.hw.serviceredis.model.ReceiptMessage;
 import ru.dan.hw.serviceredis.model.UserInfoResponse;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class UserCacheServiceImpl implements UserCacheService {
 
-    private static final String USER_RECEIPTS_KEY_PREFIX = "user:%s:receipts";
-    private static final String USER_SUBSCRIPTION_KEY_PREFIX = "user:%s:subscription";
-    private static final String USER_RECEIPTS_COUNT_KEY = "user:%s:receipts:count";
-    private static final long RECEIPT_TTL_DAYS = 90; // TTL для кэша счетов (90 дней)
-    private static final long SUBSCRIPTION_TTL_DAYS = 30; // TTL для подписки (30 дней)
+    private static final String RECEIPTS_KEY = "user:%s:receipts";
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -43,9 +34,7 @@ public class UserCacheServiceImpl implements UserCacheService {
     @Override
     public void updateCache(ReceiptMessage message) {
         UUID userId = message.userId();
-
         try {
-            // 1. Создаем ReceiptInfo из сообщения
             ReceiptInfo receipt = new ReceiptInfo(
                     message.id(),
                     message.issueDate(),
@@ -53,21 +42,12 @@ public class UserCacheServiceImpl implements UserCacheService {
                     message.price()
             );
 
-            String userReceiptsKey = String.format(USER_RECEIPTS_KEY_PREFIX, userId);
-            String receiptJson = objectMapper.writeValueAsString(receipt);
-
-            double score = message.activationDate().toEpochDay();
-
-            redisTemplate.opsForZSet().add(userReceiptsKey, receiptJson, score);
-            redisTemplate.expire(userReceiptsKey, RECEIPT_TTL_DAYS, TimeUnit.DAYS);
-            String userReceiptsCountKey = String.format(USER_RECEIPTS_COUNT_KEY, userId);
-            redisTemplate.opsForValue().increment(userReceiptsCountKey);
-            redisTemplate.expire(userReceiptsCountKey, RECEIPT_TTL_DAYS, TimeUnit.DAYS);
-
-            updateUserSubscription(userId, receipt);
-
+            redisTemplate.opsForZSet().add(
+                    RECEIPTS_KEY.formatted(userId),
+                    objectMapper.writeValueAsString(receipt),
+                    message.activationDate().toEpochDay()
+            );
             log.info("Successfully updated cache for user '{}'", userId);
-
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize receipt for user '{}'", userId, e);
             throw new IllegalStateException("Failed to serialize receipt", e);
@@ -78,64 +58,59 @@ public class UserCacheServiceImpl implements UserCacheService {
     }
 
     /**
-     * Обновление активной подписки пользователя.
-     */
-    private void updateUserSubscription(UUID userId, ReceiptInfo latestReceipt) {
-        try {
-            LocalDate expiryDate = latestReceipt.activationDate().plusMonths(1);
-
-
-            if (!expiryDate.isBefore(LocalDate.now())) {
-                ActiveSubscription subscription = new ActiveSubscription(
-                        latestReceipt.activationDate(),
-                        expiryDate,
-                        latestReceipt.price()
-                );
-
-                String subscriptionKey = String.format(USER_SUBSCRIPTION_KEY_PREFIX, userId);
-                String subscriptionJson = objectMapper.writeValueAsString(subscription);
-
-                redisTemplate.opsForValue().set(
-                        subscriptionKey,
-                        subscriptionJson,
-                        SUBSCRIPTION_TTL_DAYS,
-                        TimeUnit.DAYS
-                );
-
-                log.debug("Updated subscription for user '{}'", userId);
-            }
-        } catch (Exception e) {
-            log.error("Failed to update subscription for user '{}'", userId, e);
-        }
-    }
-
-    /**
-     * Получение данных пользователя.
+     * Получение данных о чеках пользователя.
      */
     @Override
     public UserInfoResponse getUserInfo(UUID userId, int page, int size) {
+
         try {
+            String receiptsKey = RECEIPTS_KEY.formatted(userId);
 
-            ActiveSubscription activeSubscription = getUserSubscription(userId);
+            // самый свежий счёт
+            Set<String> latestRaw = redisTemplate.opsForZSet()
+                    .reverseRange(receiptsKey, 0, 0);
 
-            String userReceiptsKey = String.format(USER_RECEIPTS_KEY_PREFIX, userId);
+            ActiveSubscription activeSubscription = null;
 
+            if (latestRaw != null && !latestRaw.isEmpty()) {
+                ReceiptInfo latestReceipt = objectMapper.readValue(
+                        latestRaw.iterator().next(),
+                        ReceiptInfo.class
+                );
+
+                LocalDate expiryDate = latestReceipt.activationDate().plusMonths(1);
+
+                if (!expiryDate.isBefore(LocalDate.now())) {
+                    activeSubscription = new ActiveSubscription(
+                            latestReceipt.activationDate(),
+                            expiryDate,
+                            latestReceipt.price()
+                    );
+                }
+            }
+
+            // Пагинированные счета
             long start = (long) page * size;
             long end = start + size - 1;
 
             Set<String> receiptsRaw = redisTemplate.opsForZSet()
-                    .reverseRange(userReceiptsKey, start, end);
+                    .reverseRange(receiptsKey, start, end);
 
-            String userReceiptsCountKey = String.format(USER_RECEIPTS_COUNT_KEY, userId);
-            String countStr = redisTemplate.opsForValue().get(userReceiptsCountKey);
-            long total = countStr != null ? Long.parseLong(countStr) : 0L;
+            long total = Optional.ofNullable(
+                    redisTemplate.opsForZSet().size(receiptsKey)
+            ).orElse(0L);
 
-            List<ReceiptInfo> receipts = receiptsRaw == null || receiptsRaw.isEmpty()
-                    ? Collections.emptyList()
+            List<ReceiptInfo> receipts = receiptsRaw == null
+                    ? List.of()
                     : receiptsRaw.stream()
-                    .map(this::parseReceiptJson)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .map(r -> {
+                        try {
+                            return objectMapper.readValue(r, ReceiptInfo.class);
+                        } catch (JsonProcessingException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    })
+                    .toList();
 
             log.info("Successfully retrieved cache for user '{}'", userId);
             return new UserInfoResponse(
@@ -153,43 +128,4 @@ public class UserCacheServiceImpl implements UserCacheService {
             throw new IllegalStateException("Failed to read user cache", ex);
         }
     }
-
-    /**
-     * Получение активной подписки пользователя.
-     */
-    private ActiveSubscription getUserSubscription(UUID userId) {
-        try {
-            String subscriptionKey = String.format(USER_SUBSCRIPTION_KEY_PREFIX, userId);
-            String subscriptionJson = redisTemplate.opsForValue().get(subscriptionKey);
-
-            if (subscriptionJson != null && !subscriptionJson.isEmpty()) {
-                ActiveSubscription subscription = objectMapper.readValue(
-                        subscriptionJson,
-                        ActiveSubscription.class
-                );
-
-                if (!subscription.expiryDate().isBefore(LocalDate.now())) {
-                    return subscription;
-                } else {
-                    redisTemplate.delete(subscriptionKey);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to get subscription for user '{}'", userId, e);
-        }
-        return null;
-    }
-
-    /**
-     * Парсинг JSON в ReceiptInfo.
-     */
-    private ReceiptInfo parseReceiptJson(String receiptJson) {
-        try {
-            return objectMapper.readValue(receiptJson, ReceiptInfo.class);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse receipt JSON: {}", receiptJson, e);
-            return null;
-        }
-    }
-
 }
